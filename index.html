@@ -18,8 +18,8 @@
 
         body {
             font-family: Arial, sans-serif;
-            background: #1a1a1a;
-            color: #ffffff;
+            background: #e0f2fe;
+            color: #1e293b;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -31,13 +31,20 @@
             margin-bottom: 5px;
             font-size: clamp(1.2em, 4vw, 2em);
             text-align: center;
+            color: #0f172a;
+        }
+
+        #info-bar {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 10px;
+            color: #475569;
+            font-size: clamp(0.8em, 2.5vw, 1em);
+            text-align: center;
         }
 
         p {
-            margin-bottom: 10px;
-            color: #cccccc;
-            font-size: clamp(0.8em, 2.5vw, 1em);
-            text-align: center;
+            color: #475569;
         }
 
         #puzzle-container {
@@ -46,7 +53,7 @@
             height: min(90vw, 90vh, 600px);
             max-width: 600px;
             max-height: 600px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 0 20px rgba(14, 165, 233, 0.4);
         }
 
         #guide {
@@ -134,7 +141,10 @@
 </head>
 <body>
     <h1>3x3 Jigsaw Puzzle</h1>
-    <p>Click two pieces to swap them</p>
+    <div id="info-bar">
+        <p>Click two pieces to swap them</p>
+        <p>Time: <span id="timer">0</span>s</p>
+    </div>
     
     <div id="puzzle-container">
         <img id="guide" src="map.png" alt="Puzzle guide">
@@ -150,15 +160,75 @@
         
         const puzzleBoard = document.getElementById('puzzle-board');
         const winMessage = document.getElementById('win-message');
+        const timerEl = document.getElementById('timer');
         
         let pieces = [];
         let selectedPiece = null;
+        let seconds = 0;
+        let timerInterval = null;
+        let gameStarted = false;
+        let audioCtx = null;
         
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSwapSound() {
+            initAudio();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.frequency.setValueAtTime(400, audioCtx.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.1);
+            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            oscillator.start(audioCtx.currentTime);
+            oscillator.stop(audioCtx.currentTime + 0.1);
+        }
+
+        function playWinSound() {
+            initAudio();
+            const notes = [523, 659, 784, 1047];
+            notes.forEach((freq, i) => {
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime + i * 0.15);
+                gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime + i * 0.15);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + i * 0.15 + 0.3);
+                oscillator.start(audioCtx.currentTime + i * 0.15);
+                oscillator.stop(audioCtx.currentTime + i * 0.15 + 0.3);
+            });
+        }
+
+        function startTimer() {
+            if (timerInterval) return;
+            timerInterval = setInterval(() => {
+                seconds++;
+                timerEl.textContent = seconds;
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
         function initPuzzle() {
             puzzleBoard.innerHTML = '';
             pieces = [];
             selectedPiece = null;
             winMessage.classList.remove('show');
+            seconds = 0;
+            timerEl.textContent = 0;
+            gameStarted = false;
+            stopTimer();
             
             const container = document.getElementById('puzzle-container');
             const size = container.clientWidth;
@@ -193,6 +263,11 @@
         }
         
         function handlePieceClick(e) {
+            if (!gameStarted) {
+                gameStarted = true;
+                startTimer();
+            }
+            initAudio();
             const clickedPiece = e.currentTarget;
             if (selectedPiece === null) {
                 selectedPiece = clickedPiece;
@@ -202,6 +277,7 @@
                 selectedPiece = null;
             } else {
                 swapElements(selectedPiece, clickedPiece);
+                playSwapSound();
                 selectedPiece.classList.remove('selected');
                 selectedPiece = null;
                 checkWin();
@@ -233,7 +309,9 @@
             });
             
             if (isWin) {
+                stopTimer();
                 setTimeout(() => {
+                    playWinSound();
                     winMessage.classList.add('show');
                 }, 300);
             }
