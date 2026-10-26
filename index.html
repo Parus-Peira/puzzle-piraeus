@@ -2,13 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>3x3 Jigsaw Puzzle</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
         }
 
         body {
@@ -19,24 +24,28 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
-            padding: 20px;
+            padding: 10px;
         }
 
         h1 {
-            margin-bottom: 10px;
-            font-size: 2em;
+            margin-bottom: 5px;
+            font-size: clamp(1.2em, 4vw, 2em);
+            text-align: center;
         }
 
         p {
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             color: #cccccc;
+            font-size: clamp(0.8em, 2.5vw, 1em);
+            text-align: center;
         }
 
         #puzzle-container {
             position: relative;
-            width: 600px;
-            height: 600px;
+            width: min(90vw, 90vh, 600px);
+            height: min(90vw, 90vh, 600px);
+            max-width: 600px;
+            max-height: 600px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
         }
 
@@ -67,10 +76,12 @@
             width: 100%;
             height: 100%;
             background-image: url('map.png');
-            background-size: 600px 600px;
+            background-size: 100% 100%;
+            background-repeat: no-repeat;
             cursor: pointer;
             transition: outline 0.2s ease;
             user-select: none;
+            touch-action: manipulation;
         }
 
         .puzzle-piece.selected {
@@ -98,15 +109,16 @@
         }
 
         #win-message h2 {
-            font-size: 3em;
+            font-size: clamp(2em, 8vw, 3em);
             color: #4ade80;
             margin-bottom: 20px;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            text-align: center;
         }
 
         #reset-btn {
             padding: 12px 30px;
-            font-size: 1.2em;
+            font-size: clamp(1em, 4vw, 1.2em);
             background: #4ade80;
             color: #000000;
             border: none;
@@ -135,8 +147,6 @@
 
     <script>
         const GRID_SIZE = 3;
-        const IMAGE_SIZE = 600;
-        const PIECE_SIZE = IMAGE_SIZE / GRID_SIZE;
         
         const puzzleBoard = document.getElementById('puzzle-board');
         const winMessage = document.getElementById('win-message');
@@ -150,6 +160,9 @@
             selectedPiece = null;
             winMessage.classList.remove('show');
             
+            const container = document.getElementById('puzzle-container');
+            const size = container.clientWidth;
+            
             for (let row = 0; row < GRID_SIZE; row++) {
                 for (let col = 0; col < GRID_SIZE; col++) {
                     const piece = document.createElement('div');
@@ -157,7 +170,8 @@
                     piece.dataset.correctRow = row;
                     piece.dataset.correctCol = col;
                     
-                    piece.style.backgroundPosition = `-${col * PIECE_SIZE}px -${row * PIECE_SIZE}px`;
+                    piece.style.backgroundSize = `${size}px ${size}px`;
+                    piece.style.backgroundPosition = `-${(col * size) / GRID_SIZE}px -${(row * size) / GRID_SIZE}px`;
                     
                     piece.addEventListener('click', handlePieceClick);
                     pieces.push(piece);
