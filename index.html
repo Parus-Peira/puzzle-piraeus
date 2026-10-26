@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3x3 Jigsaw Puzzle</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        p {
+            margin-bottom: 20px;
+            color: #cccccc;
+        }
+
+        #puzzle-container {
+            position: relative;
+            width: 600px;
+            height: 600px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        #guide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.25;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        #puzzle-board {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 2px;
+        }
+
+        .puzzle-piece {
+            width: 100%;
+            height: 100%;
+            background-image: url('map.png');
+            background-size: 600px 600px;
+            cursor: pointer;
+            transition: outline 0.2s ease;
+            user-select: none;
+        }
+
+        .puzzle-piece.selected {
+            outline: 3px solid #ffd700;
+            outline-offset: -3px;
+            z-index: 10;
+        }
+
+        #win-message {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        #win-message.show {
+            display: flex;
+        }
+
+        #win-message h2 {
+            font-size: 3em;
+            color: #4ade80;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        #reset-btn {
+            padding: 12px 30px;
+            font-size: 1.2em;
+            background: #4ade80;
+            color: #000000;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        #reset-btn:hover {
+            background: #22c55e;
+        }
+    </style>
+</head>
+<body>
+    <h1>3x3 Jigsaw Puzzle</h1>
+    <p>Click two pieces to swap them</p>
+    
+    <div id="puzzle-container">
+        <img id="guide" src="map.png" alt="Puzzle guide">
+        <div id="puzzle-board"></div>
+        <div id="win-message">
+            <h2>🎉 You Win! 🎉</h2>
+            <button id="reset-btn" onclick="resetPuzzle()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        const GRID_SIZE = 3;
+        const IMAGE_SIZE = 600;
+        const PIECE_SIZE = IMAGE_SIZE / GRID_SIZE;
+        
+        const puzzleBoard = document.getElementById('puzzle-board');
+        const winMessage = document.getElementById('win-message');
+        
+        let pieces = [];
+        let selectedPiece = null;
+        
+        function initPuzzle() {
+            puzzleBoard.innerHTML = '';
+            pieces = [];
+            selectedPiece = null;
+            winMessage.classList.remove('show');
+            
+            for (let row = 0; row < GRID_SIZE; row++) {
+                for (let col = 0; col < GRID_SIZE; col++) {
+                    const piece = document.createElement('div');
+                    piece.className = 'puzzle-piece';
+                    piece.dataset.correctRow = row;
+                    piece.dataset.correctCol = col;
+                    
+                    piece.style.backgroundPosition = `-${col * PIECE_SIZE}px -${row * PIECE_SIZE}px`;
+                    
+                    piece.addEventListener('click', handlePieceClick);
+                    pieces.push(piece);
+                }
+            }
+            
+            shufflePieces();
+            
+            pieces.forEach(piece => {
+                puzzleBoard.appendChild(piece);
+            });
+        }
+        
+        function shufflePieces() {
+            for (let i = pieces.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [pieces[i], pieces[j]] = [pieces[j], pieces[i]];
+            }
+        }
+        
+        function handlePieceClick(e) {
+            const clickedPiece = e.currentTarget;
+            if (selectedPiece === null) {
+                selectedPiece = clickedPiece;
+                clickedPiece.classList.add('selected');
+            } else if (selectedPiece === clickedPiece) {
+                selectedPiece.classList.remove('selected');
+                selectedPiece = null;
+            } else {
+                swapElements(selectedPiece, clickedPiece);
+                selectedPiece.classList.remove('selected');
+                selectedPiece = null;
+                checkWin();
+            }
+        }
+        
+        function swapElements(piece1, piece2) {
+            const parent = puzzleBoard;
+            const temp = document.createElement('div');
+            parent.insertBefore(temp, piece1);
+            parent.insertBefore(piece1, piece2);
+            parent.insertBefore(piece2, temp);
+            parent.removeChild(temp);
+        }
+        
+        function checkWin() {
+            const currentPieces = Array.from(puzzleBoard.children);
+            let isWin = true;
+            
+            currentPieces.forEach((piece, index) => {
+                const expectedRow = Math.floor(index / GRID_SIZE);
+                const expectedCol = index % GRID_SIZE;
+                const correctRow = parseInt(piece.dataset.correctRow);
+                const correctCol = parseInt(piece.dataset.correctCol);
+                
+                if (correctRow !== expectedRow || correctCol !== expectedCol) {
+                    isWin = false;
+                }
+            });
+            
+            if (isWin) {
+                setTimeout(() => {
+                    winMessage.classList.add('show');
+                }, 300);
+            }
+        }
+        
+        function resetPuzzle() {
+            initPuzzle();
+        }
+        
+        initPuzzle();
+    </script>
+</body>
+</html>
